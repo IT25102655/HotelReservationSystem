@@ -91,3 +91,39 @@ public class UserDAO {
         }
     }
 }
+
+
+    public boolean deleteAccount(int userId) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+
+            try {
+                deleteByUserId(conn, "feedback", userId);
+                deleteByUserId(conn, "payments", userId);
+                deleteByUserId(conn, "reservations", userId);
+
+                boolean deleted;
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM users WHERE id = ?")) {
+                    ps.setInt(1, userId);
+                    deleted = ps.executeUpdate() > 0;
+                }
+
+                conn.commit();
+                return deleted;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(originalAutoCommit);
+            }
+        }
+    }
+
+    private void deleteByUserId(Connection conn, String tableName, int userId) throws SQLException {
+        String sql = "DELETE FROM " + tableName + " WHERE user_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
+        }
+    }
