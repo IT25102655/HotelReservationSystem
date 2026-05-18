@@ -152,11 +152,45 @@
               </div>
 
               <form action="${pageContext.request.contextPath}/payments" method="post" id="paymentForm" novalidate>
-                <input type="hidden" name="id" value="${form.id}">
-                div class="alert alert-danger pay-card-validation" id="cardValidationError">
-                  Please fill in all card details before proceeding with payment.
-                </div>
+                private String validateCardDetails(HttpServletRequest req) {
+        String cardNumber = trim(req.getParameter("cardNumber"));
+        String expiryDate = trim(req.getParameter("expiryDate"));
+        String cvv = trim(req.getParameter("cvv"));
+        String cardholderName = trim(req.getParameter("cardholderName"));
+        String cleanCardNumber = cardNumber.replaceAll("\\s", "");
+        String cleanExpiry = expiryDate.replaceAll("\\s", "");
 
+        if (cardNumber.isEmpty()) {
+            return "Please enter card number.";
+        }
+        if (!cleanCardNumber.matches("\\d{13,19}")) {
+            return "Please enter a valid card number.";
+        }
+        if (expiryDate.isEmpty()) {
+            return "Please enter expiry date.";
+        }
+        if (!isValidExpiry(cleanExpiry)) {
+            return "Please enter a valid expiry date.";
+        }
+        if (cvv.isEmpty()) {
+            return "Please enter CVV.";
+        }
+        if (!cvv.matches("\\d{3,4}")) {
+            return "Please enter a valid CVV.";
+        }
+        if (cardholderName.isEmpty()) {
+            return "Please enter cardholder name.";
+        }
+        return null;
+    }
+
+    private boolean isValidExpiry(String cleanExpiry) {
+        if (!cleanExpiry.matches("\\d{2}/\\d{2}")) {
+            return false;
+        }
+        int month = parseInt(cleanExpiry.substring(0, 2), 0);
+        return month >= 1 && month <= 12;
+    }
                 <%-- Reservation selector (compact, shown if no pre-selected reservation) --%>
                 <c:if test="${empty selRes}">
                   <div class="pay-field-group">
@@ -187,7 +221,7 @@
                 <div class="pay-field-group">
                   <label class="pay-label" for="cardNumber">Card Number</label>
                   <div class="pay-input-icon-wrap">
-                    <input type="text" id="cardNumber" name="cardNumber" class="pay-input" placeholder="1234 1234 1234 1234" maxlength="19" inputmode="numeric" autocomplete="cc-number" required>
+                    <input type="text" id="cardNumber" name="cardNumber" class="pay-input" placeholder="1234 1234 1234 1234" maxlength="23" inputmode="numeric" autocomplete="cc-number" required>
                     <svg class="pay-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                   </div>
                 </div>
@@ -363,7 +397,7 @@
     var cardInput = document.getElementById('cardNumber');
     if (cardInput) {
       cardInput.addEventListener('input', function () {
-        var v = this.value.replace(/\D/g, '').substring(0, 16);
+       var v = this.value.replace(/\D/g, '').substring(0, 19);
         this.value = v.replace(/(.{4})/g, '$1 ').trim();
       });
     }
@@ -380,41 +414,44 @@
     var cardError = document.getElementById('cardValidationError');
     var cvvInput = document.getElementById('cvv');
     var nameInput = document.getElementById('cardholderName');
-    if (paymentForm) {
+   if (paymentForm) {
       paymentForm.addEventListener('submit', function (e) {
-        var validCard = hasValidCardDetails();
-        if (!validCard) {
+        var validationMessage = validateCardDetails();
+        if (validationMessage) {
           e.preventDefault();
-          if (cardError) cardError.classList.add('show');
+          if (cardError) {
+            cardError.textContent = validationMessage;
+            cardError.classList.add('show');
+          }
           if (window.showToast) {
-            window.showToast('Please fill in all card details before proceeding with payment.', 'error');
+            window.showToast(validationMessage, 'error');
           }
         } else if (cardError) {
           cardError.classList.remove('show');
         }
       });
     }
-    function hasValidCardDetails() {
-      var cardDigits = cardInput ? cardInput.value.replace(/\D/g, '') : '';
-      var expiryDigits = expInput ? expInput.value.replace(/\D/g, '') : '';
-      var cvvDigits = cvvInput ? cvvInput.value.replace(/\D/g, '') : '';
+    function validateCardDetails() {
+      var cardNumber = cardInput ? cardInput.value.trim() : '';
+      var expiryDate = expInput ? expInput.value.trim() : '';
+      var cvv = cvvInput ? cvvInput.value.trim() : '';
       var cardholder = nameInput ? nameInput.value.trim() : '';
-      return cardDigits.length >= 13
-        && cardDigits.length <= 19
-        && expiryDigits.length === 4
-        && isValidExpiry(expiryDigits)
-        && cvvDigits.length >= 3
-        && cvvDigits.length <= 4
-        && cardholder.length > 0;
+      var cleanCardNumber = cardNumber.replace(/\s/g, '');
+      var cleanExpiry = expiryDate.replace(/\s/g, '');
+      var cleanCvv = cvv.trim();
+      if (!cardNumber) return 'Please enter card number.';
+      if (!/^\d{13,19}$/.test(cleanCardNumber)) return 'Please enter a valid card number.';
+      if (!expiryDate) return 'Please enter expiry date.';
+      if (!isValidExpiry(cleanExpiry)) return 'Please enter a valid expiry date.';
+      if (!cleanCvv) return 'Please enter CVV.';
+      if (!/^\d{3,4}$/.test(cleanCvv)) return 'Please enter a valid CVV.';
+      if (!cardholder) return 'Please enter cardholder name.';
+      return '';
     }
-    function isValidExpiry(expiryDigits) {
-      var month = parseInt(expiryDigits.substring(0, 2), 10);
-      var year = 2000 + parseInt(expiryDigits.substring(2), 10);
-      if (!month || month < 1 || month > 12 || !year) return false;
-      var now = new Date();
-      var currentMonth = now.getMonth() + 1;
-      var currentYear = now.getFullYear();
-      return year > currentYear || (year === currentYear && month >= currentMonth);
+    function isValidExpiry(cleanExpiry) {
+      if (!/^\d{2}\/\d{2}$/.test(cleanExpiry)) return false;
+      var month = parseInt(cleanExpiry.substring(0, 2), 10);
+      return month >= 1 && month <= 12;
     }
     // Load the checkout summary when a reservation is selected.
     var resSel = document.getElementById('reservationId');
