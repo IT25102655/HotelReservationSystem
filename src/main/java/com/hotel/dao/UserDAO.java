@@ -45,6 +45,17 @@ public class UserDAO {
         }
     }
 
+        public User getByEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? map(rs) : null;
+            }
+        }
+    }
+
     public boolean register(User user, String password) throws SQLException {
         String sql = "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -54,6 +65,16 @@ public class UserDAO {
             ps.setString(3, user.getPhone());
             ps.setString(4, PasswordUtil.sha256(password));
             ps.setString(5, user.getRole() != null ? user.getRole() : "User");
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+        public boolean updatePassword(int userId, String password) throws SQLException {
+        String sql = "UPDATE users SET password_hash = ? WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, PasswordUtil.sha256(password));
+            ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         }
     }
