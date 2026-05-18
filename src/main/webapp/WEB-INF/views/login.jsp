@@ -53,6 +53,9 @@
         <c:if test="${param.msg == 'accountDeleted'}">
           <div class="alert alert-success auth-alert">Account deleted successfully.</div>
         </c:if>
+        <c:if test="${param.msg == 'passwordReset'}">
+          <div class="alert alert-success auth-alert">Password reset successfully. Please login with your new password.</div>
+        </c:if>
         <c:if test="${not empty error}">
           <div class="alert alert-danger auth-alert">${error}</div>
         </c:if>
@@ -96,7 +99,7 @@
               <input type="checkbox" name="rememberMe">
               <span>Remember me</span>
             </label>
-            <a class="auth-forgot" href="mailto:admin@hotel.com?subject=Password%20assistance">Forgot password?</a>
+               <a class="auth-forgot" href="${pageContext.request.contextPath}/forgot-password">Forgot password?</a>
           </div>
 
           <button type="submit" class="btn auth-submit" id="signInBtn">Sign In</button>
