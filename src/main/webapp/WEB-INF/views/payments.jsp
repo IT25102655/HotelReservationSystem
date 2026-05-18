@@ -151,8 +151,11 @@
                 <span class="pay-logo pay-logo-disc">DISC</span>
               </div>
 
-              <form action="${pageContext.request.contextPath}/payments" method="post" id="paymentForm">
+              <form action="${pageContext.request.contextPath}/payments" method="post" id="paymentForm" novalidate>
                 <input type="hidden" name="id" value="${form.id}">
+                div class="alert alert-danger pay-card-validation" id="cardValidationError">
+                  Please fill in all card details before proceeding with payment.
+                </div>
 
                 <%-- Reservation selector (compact, shown if no pre-selected reservation) --%>
                 <c:if test="${empty selRes}">
@@ -184,7 +187,7 @@
                 <div class="pay-field-group">
                   <label class="pay-label" for="cardNumber">Card Number</label>
                   <div class="pay-input-icon-wrap">
-                    <input type="text" id="cardNumber" name="cardNumber" class="pay-input" placeholder="1234 1234 1234 1234" maxlength="19" inputmode="numeric" autocomplete="cc-number">
+                    <input type="text" id="cardNumber" name="cardNumber" class="pay-input" placeholder="1234 1234 1234 1234" maxlength="19" inputmode="numeric" autocomplete="cc-number" required>
                     <svg class="pay-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                   </div>
                 </div>
@@ -192,12 +195,12 @@
                 <div class="pay-field-row">
                   <div class="pay-field-group">
                     <label class="pay-label" for="expiryDate">Expiry Date</label>
-                    <input type="text" id="expiryDate" name="expiryDate" class="pay-input" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp">
+                    <input type="text" id="expiryDate" name="expiryDate" class="pay-input" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp" required>
                   </div>
                   <div class="pay-field-group">
                     <label class="pay-label" for="cvv">CVV</label>
                     <div class="pay-input-icon-wrap">
-                      <input type="text" id="cvv" name="cvv" class="pay-input" placeholder="123" maxlength="4" inputmode="numeric" autocomplete="cc-csc">
+                      <input type="text" id="cvv" name="cvv" class="pay-input" placeholder="123" maxlength="4" inputmode="numeric" autocomplete="cc-csc" required>
                       <svg class="pay-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
                   </div>
@@ -205,7 +208,7 @@
 
                 <div class="pay-field-group">
                   <label class="pay-label" for="cardholderName">Cardholder Name</label>
-                  <input type="text" id="cardholderName" name="cardholderName" class="pay-input" placeholder="Name on Card" autocomplete="cc-name">
+                   <input type="text" id="cardholderName" name="cardholderName" class="pay-input" placeholder="Name on Card" autocomplete="cc-name" required>
                 </div>
 
                 <%-- ── Payment Method & Date (backend fields) ─── --%>
@@ -233,14 +236,24 @@
                   </div>
                   <div class="pay-field-group">
                     <label class="pay-label" for="status">Status</label>
-                    <select id="status" name="status" class="pay-select" required>
-                      <option value="Paid" ${form.status == 'Paid' || empty form.status ? 'selected' : ''}>Paid</option>
-                      <option value="Pending" ${form.status == 'Pending' ? 'selected' : ''}>Pending</option>
-                      <option value="Failed" ${form.status == 'Failed' ? 'selected' : ''}>Failed</option>
-                      <c:if test="${sessionScope.authUser.admin}">
+                     <c:choose>
+                      <c:when test="${sessionScope.authUser.admin}">
+                        <select id="status" name="status" class="pay-select" required>
+                          <option value="Pending" ${form.status == 'Pending' || empty form.status ? 'selected' : ''}>Pending</option>
+                          <option value="Paid" ${form.status == 'Paid' ? 'selected' : ''}>Paid</option>
+                          <option value="Failed" ${form.status == 'Failed' ? 'selected' : ''}>Failed</option>
                         <option value="Refunded" ${form.status == 'Refunded' ? 'selected' : ''}>Refunded</option>
-                      </c:if>
-                    </select>
+                        </select>
+                      </c:when>
+                      <c:otherwise>
+                        <input type="hidden" id="status" name="status" value="${not empty form.status ? form.status : 'Pending'}">
+                        <div class="pay-readonly-status">
+                          <span class="badge badge-${not empty form.status ? form.status : 'Pending'}">
+                            <c:out value="${not empty form.status ? form.status : 'Pending'}"/>
+                          </span>
+                        </div>
+                      </c:otherwise>
+                    </c:choose>
                   </div>
                 </div>
 
@@ -362,6 +375,46 @@
         if (v.length >= 3) v = v.substring(0, 2) + ' / ' + v.substring(2);
         this.value = v;
       });
+    }
+     var paymentForm = document.getElementById('paymentForm');
+    var cardError = document.getElementById('cardValidationError');
+    var cvvInput = document.getElementById('cvv');
+    var nameInput = document.getElementById('cardholderName');
+    if (paymentForm) {
+      paymentForm.addEventListener('submit', function (e) {
+        var validCard = hasValidCardDetails();
+        if (!validCard) {
+          e.preventDefault();
+          if (cardError) cardError.classList.add('show');
+          if (window.showToast) {
+            window.showToast('Please fill in all card details before proceeding with payment.', 'error');
+          }
+        } else if (cardError) {
+          cardError.classList.remove('show');
+        }
+      });
+    }
+    function hasValidCardDetails() {
+      var cardDigits = cardInput ? cardInput.value.replace(/\D/g, '') : '';
+      var expiryDigits = expInput ? expInput.value.replace(/\D/g, '') : '';
+      var cvvDigits = cvvInput ? cvvInput.value.replace(/\D/g, '') : '';
+      var cardholder = nameInput ? nameInput.value.trim() : '';
+      return cardDigits.length >= 13
+        && cardDigits.length <= 19
+        && expiryDigits.length === 4
+        && isValidExpiry(expiryDigits)
+        && cvvDigits.length >= 3
+        && cvvDigits.length <= 4
+        && cardholder.length > 0;
+    }
+    function isValidExpiry(expiryDigits) {
+      var month = parseInt(expiryDigits.substring(0, 2), 10);
+      var year = 2000 + parseInt(expiryDigits.substring(2), 10);
+      if (!month || month < 1 || month > 12 || !year) return false;
+      var now = new Date();
+      var currentMonth = now.getMonth() + 1;
+      var currentYear = now.getFullYear();
+      return year > currentYear || (year === currentYear && month >= currentMonth);
     }
     // Load the checkout summary when a reservation is selected.
     var resSel = document.getElementById('reservationId');
