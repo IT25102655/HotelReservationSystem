@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 
-@WebServlet({"/login", "/register", "/logout", "/api/auth/delete-account"})
+@WebServlet({"/login", "/register", "/logout", "/forgot-password", "/api/auth/delete-account"})
 public class AuthServlet extends HttpServlet {
     private UserDAO userDAO;
 
@@ -41,6 +41,8 @@ public class AuthServlet extends HttpServlet {
         req.setCharacterEncoding("UTF-8");
         if ("/register".equals(req.getServletPath())) {
             register(req, res);
+        } else if ("/forgot-password".equals(req.getServletPath())) {
+            resetPassword(req, res);
         } else {
             login(req, res);
         }
@@ -136,6 +138,46 @@ public class AuthServlet extends HttpServlet {
             User authenticated = userDAO.authenticate(email, password);
             req.getSession(true).setAttribute("authUser", authenticated);
             res.sendRedirect(req.getContextPath() + "/dashboard");
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
+    }
+
+        private void resetPassword(HttpServletRequest req, HttpServletResponse res)
+            throws ServletException, IOException {
+        String email = trim(req.getParameter("email"));
+        String newPassword = req.getParameter("newPassword");
+        String confirmPassword = req.getParameter("confirmPassword");
+
+        if (email.isEmpty()) {
+            req.setAttribute("error", "No account found with these details.");
+            req.getRequestDispatcher("/WEB-INF/views/forgot-password.jsp").forward(req, res);
+            return;
+        }
+        if (newPassword == null || newPassword.length() < 4) {
+            req.setAttribute("error", "New password must be at least 4 characters.");
+            req.setAttribute("email", email);
+            req.getRequestDispatcher("/WEB-INF/views/forgot-password.jsp").forward(req, res);
+            return;
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            req.setAttribute("error", "Passwords do not match.");
+            req.setAttribute("email", email);
+            req.getRequestDispatcher("/WEB-INF/views/forgot-password.jsp").forward(req, res);
+            return;
+        }
+
+        try {
+            User user = userDAO.getByEmail(email);
+            if (user == null) {
+                req.setAttribute("error", "No account found with these details.");
+                req.setAttribute("email", email);
+                req.getRequestDispatcher("/WEB-INF/views/forgot-password.jsp").forward(req, res);
+                return;
+            }
+
+            userDAO.updatePassword(user.getId(), newPassword);
+            res.sendRedirect(req.getContextPath() + "/login?msg=passwordReset");
         } catch (Exception e) {
             throw new ServletException(e);
         }
