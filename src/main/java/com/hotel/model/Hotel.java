@@ -57,34 +57,48 @@ public class Hotel {
     public String getEmail()                 {
         return email;
     }
+
+    //setter for email
     public void   setEmail(String email)     {
         this.email = email;
     }
 
+    //getter for description
     public String getDescription()                   {
         return description;
     }
+
+    //setter for description
     public void   setDescription(String description) {
         this.description = description;
     }
 
+    //getter for facilities
     public String getFacilities()                    {
         return facilities;
     }
+
+    //setter for facilities
     public void   setFacilities(String facilities)   {
         this.facilities = facilities;
     }
 
+    //getter for image
     public String getImage()             {
         return image;
     }
+
+    //setter for image
     public void   setImage(String image) {
         this.image = image;
     }
 
+    //getter for star rating
     public int  getStarRating()                  {
         return starRating;
     }
+
+    //setter for star rating
     public void setStarRating(int starRating)    {
         this.starRating = starRating;
     }
