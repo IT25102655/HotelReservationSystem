@@ -50,6 +50,9 @@
         <c:if test="${param.msg == 'loggedout'}">
           <div class="alert alert-success auth-alert">You have been successfully logged out.</div>
         </c:if>
+        <c:if test="${param.msg == 'accountDeleted'}">
+          <div class="alert alert-success auth-alert">Account deleted successfully.</div>
+        </c:if>
         <c:if test="${not empty error}">
           <div class="alert alert-danger auth-alert">${error}</div>
         </c:if>

@@ -64,6 +64,10 @@
             <span class="dropdown-email">${sessionScope.authUser.role} Account</span>
           </div>
           <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item dropdown-item-danger" id="deleteAccountBtn" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete Account
+          </button>
           <a href="${pageContext.request.contextPath}/logout" class="dropdown-item dropdown-item-danger" role="menuitem">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
@@ -76,6 +80,23 @@
 
 <%-- Toast notification container --%>
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<div class="modal-backdrop" id="deleteAccountModal" aria-hidden="true">
+  <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
+    <div class="confirm-modal-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    </div>
+    <div class="confirm-modal-copy">
+      <h2 id="deleteAccountTitle">Delete Account</h2>
+      <p>Are you sure you want to permanently delete your account? This action cannot be undone.</p>
+      <p class="confirm-modal-error" id="deleteAccountError" aria-live="polite"></p>
+    </div>
+    <div class="confirm-modal-actions">
+      <button type="button" class="btn btn-outline" id="cancelDeleteAccountBtn">Cancel</button>
+      <button type="button" class="btn btn-danger confirm-delete-btn" id="confirmDeleteAccountBtn">Delete Account</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -114,6 +135,80 @@
       navBtn.classList.toggle('nav-toggle-open', open);
       navBtn.setAttribute('aria-expanded', open);
     });
+  }
+
+  var deleteBtn = document.getElementById('deleteAccountBtn');
+  var deleteModal = document.getElementById('deleteAccountModal');
+  var cancelDeleteBtn = document.getElementById('cancelDeleteAccountBtn');
+  var confirmDeleteBtn = document.getElementById('confirmDeleteAccountBtn');
+  var deleteError = document.getElementById('deleteAccountError');
+  if (deleteBtn && deleteModal && cancelDeleteBtn && confirmDeleteBtn) {
+    deleteBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (menu && trigger) {
+        menu.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+      openDeleteModal();
+    });
+    cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    deleteModal.addEventListener('click', function (e) {
+      if (e.target === deleteModal) closeDeleteModal();
+    });
+    confirmDeleteBtn.addEventListener('click', function () {
+      deleteError.textContent = '';
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = 'Deleting...';
+      fetch('${pageContext.request.contextPath}/api/auth/delete-account', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function (response) {
+          return response.json().catch(function () {
+            return { success: false, message: 'Could not delete your account. Please try again.' };
+          }).then(function (data) {
+            if (!response.ok || !data.success) {
+              throw new Error(data.message || 'Could not delete your account. Please try again.');
+            }
+            return data;
+          });
+        })
+        .then(function () {
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch (ignored) {
+          }
+          window.location.href = '${pageContext.request.contextPath}/login?msg=accountDeleted';
+        })
+        .catch(function (error) {
+          deleteError.textContent = error.message;
+          if (window.showToast) {
+            window.showToast(error.message, 'error');
+          }
+        })
+        .finally(function () {
+          confirmDeleteBtn.disabled = false;
+          confirmDeleteBtn.textContent = 'Delete Account';
+        });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && deleteModal.classList.contains('open')) {
+        closeDeleteModal();
+      }
+    });
+  }
+  function openDeleteModal() {
+    deleteError.textContent = '';
+    deleteModal.classList.add('open');
+    deleteModal.setAttribute('aria-hidden', 'false');
+    cancelDeleteBtn.focus();
+  }
+  function closeDeleteModal() {
+    deleteModal.classList.remove('open');
+    deleteModal.setAttribute('aria-hidden', 'true');
+    deleteBtn.focus();
   }
 
   // ── Toast helper (global) ──────────────────────────────────────────────

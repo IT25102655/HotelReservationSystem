@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 
-@WebServlet({"/login", "/register", "/logout"})
+@WebServlet({"/login", "/register", "/logout", "/api/auth/delete-account"})
 public class AuthServlet extends HttpServlet {
     private UserDAO userDAO;
 
@@ -43,6 +43,41 @@ public class AuthServlet extends HttpServlet {
             register(req, res);
         } else {
             login(req, res);
+        }
+    }
+
+        @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse res)
+            throws ServletException, IOException {
+        if (!"/api/auth/delete-account".equals(req.getServletPath())) {
+            res.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
+
+        HttpSession session = req.getSession(false);
+        User authUser = session != null ? (User) session.getAttribute("authUser") : null;
+        if (authUser == null) {
+            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            writeJson(res, false, "Please sign in again before deleting your account.");
+            return;
+        }
+
+        try {
+            boolean deleted = userDAO.deleteAccount(authUser.getId());
+            if (!deleted) {
+                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                writeJson(res, false, "Account could not be found.");
+                return;
+            }
+
+            session.invalidate();
+            writeJson(res, true, "Account deleted successfully.");
+        } catch (Exception e) {
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            writeJson(res, false, "Could not delete your account. Please try again.");
         }
     }
 
@@ -108,5 +143,13 @@ public class AuthServlet extends HttpServlet {
 
     private String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private void writeJson(HttpServletResponse res, boolean success, String message) throws IOException {
+        res.getWriter().write("{\"success\":" + success + ",\"message\":\"" + escapeJson(message) + "\"}");
+    }
+
+    private String escapeJson(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
