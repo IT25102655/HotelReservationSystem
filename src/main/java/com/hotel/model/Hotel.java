@@ -1,6 +1,8 @@
 package com.hotel.model;
 
 public class Hotel {
+
+    //private variables(Encapsulation)
     private int    id;
     private String hotelName;
     private String location;
@@ -11,34 +13,47 @@ public class Hotel {
     private String image;
     private int    starRating;
 
+    //getter method for id
     public int    getId()            {
         return id;
     }
+
+    //settor method for id
     public void   setId(int id)      { 
         this.id = id;
     }
 
+    //getter method for hotel name
     public String getHotelName()                   {
         return hotelName;
     }
+
+    //setter method for hotel name
     public void   setHotelName(String hotelName)   {
         this.hotelName = hotelName; 
     }
 
+    //getter for location
     public String getLocation()                    {
         return location; 
     }
+
+    //setter for location
     public void   setLocation(String location)     {
         this.location = location;
     }
 
+    //getter for contact number
     public String getContactNumber()                       { 
         return contactNumber;
     }
+
+    //setter for contact number
     public void   setContactNumber(String contactNumber)   { 
         this.contactNumber = contactNumber;
     }
 
+    //getter for email
     public String getEmail()                 {
         return email;
     }
