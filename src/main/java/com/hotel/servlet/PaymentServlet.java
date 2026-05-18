@@ -66,12 +66,24 @@ public class PaymentServlet extends HttpServlet {
         try {
             switch (action) {
                 case "add":
+                    //Create new Payment object
                     Payment payment = new Payment();
+                    //set current date as payment date
                     payment.setPaymentDate(LocalDate.now().toString());
-                     payment.setPaymentMethod("Card");
+                    
+                    //set default payment method
+                    payment.setPaymentMethod("Card");
+                    //set default payment status
                     payment.setStatus("Pending");
+                    
+                    //Get reservation ID from request
+                    
                     int reservationId = parseInt(req.getParameter("reservationId"), 0);
+                    
+                    //Check reservation ID is valid
+                    
                     if (reservationId > 0) {
+                        //retrieve reservation details
                         Reservation reservation = reservationDAO.getById(reservationId);
                         if (reservation != null && canUseReservation(user, reservation)) {
                             Payment existingPayment = user.isAdmin()
