@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 
 @WebServlet("/payments")
@@ -40,13 +41,22 @@ public class PaymentServlet extends HttpServlet {
                 case "add":
                     Payment payment = new Payment();
                     payment.setPaymentDate(LocalDate.now().toString());
-                    payment.setStatus("Paid");
+                     payment.setPaymentMethod("Card");
+                    payment.setStatus("Pending");
                     int reservationId = parseInt(req.getParameter("reservationId"), 0);
                     if (reservationId > 0) {
                         Reservation reservation = reservationDAO.getById(reservationId);
                         if (reservation != null && canUseReservation(user, reservation)) {
-                            payment.setReservationId(reservationId);
-                            payment.setAmount(reservation.getTotalAmount());
+                            Payment existingPayment = user.isAdmin()
+                                    ? paymentDAO.getByReservationId(reservationId)
+                                    : paymentDAO.getByReservationIdForUser(reservationId, user.getId());
+                            if (existingPayment != null) {
+                                payment = existingPayment;
+                            } else {
+                                payment.setReservationId(reservationId);
+                                payment.setAmount(reservation.getTotalAmount());
+                            }
+                    
                         }
                     }
                     showForm(req, res, user, payment, "add", null);
@@ -90,6 +100,16 @@ public class PaymentServlet extends HttpServlet {
             payment.setUserId(reservation.getUserId());
             if (payment.getAmount() <= 0) {
                 payment.setAmount(reservation.getTotalAmount());
+            }
+            boolean paidRequested = !user.isAdmin() || "Paid".equalsIgnoreCase(req.getParameter("status"));
+            if (paidRequested) {
+                String cardError = validateCardDetails(req);
+                if (cardError != null) {
+                    payment.setStatus("Pending");
+                    showForm(req, res, user, payment, payment.getId() > 0 ? "edit" : "add", cardError);
+                    return;
+                }
+                payment.setStatus("Paid");
             }
 
             if (payment.getId() > 0) {
@@ -142,12 +162,47 @@ public class PaymentServlet extends HttpServlet {
         payment.setPaymentMethod(req.getParameter("paymentMethod"));
         payment.setPaymentDate(defaultString(req.getParameter("paymentDate"), LocalDate.now().toString()));
         String status = req.getParameter("status");
-        if (!user.isAdmin() && "Refunded".equalsIgnoreCase(status)) {
-            status = "Paid";
+         if (!user.isAdmin()) {
+            status = "Pending";
         }
-        payment.setStatus(defaultString(status, "Paid"));
+        payment.setStatus(defaultString(status, "Pending"));
         return payment;
     }
+    private String validateCardDetails(HttpServletRequest req) {
+        String cardNumber = digitsOnly(req.getParameter("cardNumber"));
+        String expiryDate = trim(req.getParameter("expiryDate"));
+        String cvv = digitsOnly(req.getParameter("cvv"));
+        String cardholderName = trim(req.getParameter("cardholderName"));
+
+        if (cardNumber.isEmpty() || expiryDate.isEmpty() || cvv.isEmpty() || cardholderName.isEmpty()) {
+            return "Please fill in all card details before proceeding with payment.";
+        }
+        if (cardNumber.length() < 13 || cardNumber.length() > 19) {
+            return "Please fill in all card details before proceeding with payment.";
+        }
+        if (cvv.length() < 3 || cvv.length() > 4) {
+            return "Please fill in all card details before proceeding with payment.";
+        }
+        if (!isValidExpiry(expiryDate)) {
+            return "Please fill in all card details before proceeding with payment.";
+        }
+        return null;
+    }
+
+    private boolean isValidExpiry(String expiryDate) {
+        String digits = digitsOnly(expiryDate);
+        if (digits.length() != 4) {
+            return false;
+        }
+        int month = parseInt(digits.substring(0, 2), 0);
+        int year = parseInt(digits.substring(2), -1);
+        if (month < 1 || month > 12 || year < 0) {
+            return false;
+        }
+        YearMonth expiry = YearMonth.of(2000 + year, month);
+        return !expiry.isBefore(YearMonth.now());
+    }
+
 
     private Payment findPayment(HttpServletRequest req, User user) throws Exception {
         int id = parseInt(req.getParameter("id"), 0);
@@ -164,6 +219,13 @@ public class PaymentServlet extends HttpServlet {
 
     private String defaultString(String value, String fallback) {
         return value == null || value.isEmpty() ? fallback : value;
+    }
+    private String trim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String digitsOnly(String value) {
+        return value == null ? "" : value.replaceAll("\\D", "");
     }
 
     private int parseInt(String value, int fallback) {
