@@ -1,6 +1,7 @@
 package com.hotel.servlet;
 
 import com.hotel.dao.HotelDAO;
+import com.hotel.dao.PaymentDAO;
 import com.hotel.dao.ReservationDAO;
 import com.hotel.dao.RoomDAO;
 import com.hotel.dao.UserDAO;
@@ -23,6 +24,7 @@ public class ReservationServlet extends HttpServlet {
     private RoomDAO        roomDAO;
     private UserDAO        userDAO;
     private HotelDAO       hotelDAO;
+    private PaymentDAO     paymentDAO;
 
     @Override
     public void init() {
@@ -30,6 +32,7 @@ public class ReservationServlet extends HttpServlet {
         roomDAO        = new RoomDAO();
         userDAO        = new UserDAO();
         hotelDAO       = new HotelDAO();
+        paymentDAO     = new PaymentDAO();
     }
 
     @Override
@@ -112,6 +115,10 @@ public class ReservationServlet extends HttpServlet {
                     showForm(req, res, user, reservation, "add",
                              "Reservation could not be created. Please check the details and try again.");
                     return;
+                }
+                    Reservation created = reservationDAO.getById(newId);
+                if (created != null) {
+                    paymentDAO.createPendingForReservation(newId, created.getUserId(), created.getTotalAmount());
                 }
                 if (!user.isAdmin()) {
                     res.sendRedirect(req.getContextPath() + "/reservations?action=success&id=" + newId + "&msg=created");
