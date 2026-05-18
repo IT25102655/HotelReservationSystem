@@ -3275,6 +3275,25 @@ textarea {
 .pay-field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .pay-label       { font-size: 13px; font-weight: 600; color: var(--text); }
 
+.pay-card-validation {
+  display: none;
+  margin-bottom: 18px;
+}
+
+.pay-card-validation.show {
+  display: block;
+}
+
+.pay-readonly-status {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  min-height: 44px;
+  padding: 10px 14px;
+}
+
 .pay-input,
 .pay-select {
   width: 100%;
