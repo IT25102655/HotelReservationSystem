@@ -72,6 +72,43 @@ public class PaymentDAO {
             }
         }
     }
+    public Payment getByReservationId(int reservationId) throws SQLException {
+        String sql = SELECT_WITH_JOINS + "WHERE p.reservation_id = ? ORDER BY p.id DESC LIMIT 1";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reservationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? map(rs) : null;
+            }
+        }
+    }
+
+    public Payment getByReservationIdForUser(int reservationId, int userId) throws SQLException {
+        String sql = SELECT_WITH_JOINS + "WHERE p.reservation_id = ? AND p.user_id = ? ORDER BY p.id DESC LIMIT 1";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reservationId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? map(rs) : null;
+            }
+        }
+    }
+
+    public void createPendingForReservation(int reservationId, int userId, double amount) throws SQLException {
+        if (getByReservationId(reservationId) != null) {
+            return;
+        }
+
+        Payment payment = new Payment();
+        payment.setReservationId(reservationId);
+        payment.setUserId(userId);
+        payment.setAmount(amount);
+        payment.setPaymentMethod("Card");
+        payment.setPaymentDate(java.time.LocalDate.now().toString());
+        payment.setStatus("Pending");
+        insert(payment);
+    }
 
     public boolean insert(Payment payment) throws SQLException {
         String sql = "INSERT INTO payments (reservation_id, user_id, amount, payment_method, payment_date, status) "
