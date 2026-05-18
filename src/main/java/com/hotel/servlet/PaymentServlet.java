@@ -13,8 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.YearMonth;
-
 
 @WebServlet("/payments")
 public class PaymentServlet extends HttpServlet {
@@ -169,40 +167,44 @@ public class PaymentServlet extends HttpServlet {
         return payment;
     }
     private String validateCardDetails(HttpServletRequest req) {
-        String cardNumber = digitsOnly(req.getParameter("cardNumber"));
+        String cardNumber = trim(req.getParameter("cardNumber"));
         String expiryDate = trim(req.getParameter("expiryDate"));
-        String cvv = digitsOnly(req.getParameter("cvv"));
+        String cvv = trim(req.getParameter("cvv"));
         String cardholderName = trim(req.getParameter("cardholderName"));
+        String cleanCardNumber = cardNumber.replaceAll("\\s", "");
+        String cleanExpiry = expiryDate.replaceAll("\\s", "");
 
-        if (cardNumber.isEmpty() || expiryDate.isEmpty() || cvv.isEmpty() || cardholderName.isEmpty()) {
-            return "Please fill in all card details before proceeding with payment.";
+        if (cardNumber.isEmpty()) {
+            return "Please enter card number.";
         }
-        if (cardNumber.length() < 13 || cardNumber.length() > 19) {
-            return "Please fill in all card details before proceeding with payment.";
+        if (!cleanCardNumber.matches("\\d{13,19}")) {
+            return "Please enter a valid card number.";
         }
-        if (cvv.length() < 3 || cvv.length() > 4) {
-            return "Please fill in all card details before proceeding with payment.";
+        if (expiryDate.isEmpty()) {
+            return "Please enter expiry date.";
         }
-        if (!isValidExpiry(expiryDate)) {
-            return "Please fill in all card details before proceeding with payment.";
+        if (!isValidExpiry(cleanExpiry)) {
+            return "Please enter a valid expiry date.";
+        }
+        if (cvv.isEmpty()) {
+            return "Please enter CVV.";
+        }
+        if (!cvv.matches("\\d{3,4}")) {
+            return "Please enter a valid CVV.";
+        }
+        if (cardholderName.isEmpty()) {
+            return "Please enter cardholder name.";
         }
         return null;
     }
 
-    private boolean isValidExpiry(String expiryDate) {
-        String digits = digitsOnly(expiryDate);
-        if (digits.length() != 4) {
+    private boolean isValidExpiry(String cleanExpiry) {
+        if (!cleanExpiry.matches("\\d{2}/\\d{2}")) {
             return false;
         }
-        int month = parseInt(digits.substring(0, 2), 0);
-        int year = parseInt(digits.substring(2), -1);
-        if (month < 1 || month > 12 || year < 0) {
-            return false;
-        }
-        YearMonth expiry = YearMonth.of(2000 + year, month);
-        return !expiry.isBefore(YearMonth.now());
+        int month = parseInt(cleanExpiry.substring(0, 2), 0);
+        return month >= 1 && month <= 12;
     }
-
 
     private Payment findPayment(HttpServletRequest req, User user) throws Exception {
         int id = parseInt(req.getParameter("id"), 0);
@@ -222,10 +224,7 @@ public class PaymentServlet extends HttpServlet {
     }
     private String trim(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private String digitsOnly(String value) {
-        return value == null ? "" : value.replaceAll("\\D", "");
+    
     }
 
     private int parseInt(String value, int fallback) {
