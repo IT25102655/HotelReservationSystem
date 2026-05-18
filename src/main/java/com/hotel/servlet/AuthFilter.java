@@ -51,6 +51,7 @@ public class AuthFilter implements Filter {
                 || path.equals("/index.jsp")
                 || path.equals("/login")
                 || path.equals("/register")
+                || path.equals("/forgot-password")
                 || path.startsWith("/css/");
     }
 
