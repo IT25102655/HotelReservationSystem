@@ -15,21 +15,48 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 @WebServlet("/payments")
+    /* PaymentServlet class
+     *Responsibilities
+     * - Handle payment requests
+     * - Process from data
+     * - call DAO methods
+     * - Send responses
+     */
 public class PaymentServlet extends HttpServlet {
+
+    //Create PaymentDAO object
     private PaymentDAO paymentDAO;
+    //Create ReservationDAO object
     private ReservationDAO reservationDAO;
+
+    //Runs only once when servlet starts
 
     @Override
     public void init() {
+
+        //create PaymentDAO object
         paymentDAO = new PaymentDAO();
+        //create ReservationDAO object
         reservationDAO = new ReservationDAO();
     }
+    /* 
+     * doGet() Method
+     * Handles GET requests
+     * 
+     *Used For: 
+     *- loading pages
+     *- listing payments
+     *-edit payments
+     *-delete payments 
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res)
             throws ServletException, IOException {
+        //Get currently loged in user
         User user = currentUser(req);
+        //Get action parameter from URL
         String action = req.getParameter("action");
+        //If action is empty, deafault action becomes 'List'
         if (action == null) {
             action = "list";
         }
