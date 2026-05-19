@@ -1,7 +1,7 @@
 package com.hotel.model;
 
 public class Hotel {
-    private int    id;
+    private int    id; 
     private String hotelName;
     private String location;
     private String contactNumber;
