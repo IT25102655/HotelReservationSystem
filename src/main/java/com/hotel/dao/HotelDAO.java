@@ -1,7 +1,7 @@
 package com.hotel.dao;
 
 import com.hotel.model.Hotel;
-import com.hotel.util.DatabaseUtil;
+import com.hotel.util.DatabaseUtil; 
 
 import java.sql.*;
 import java.util.ArrayList;
