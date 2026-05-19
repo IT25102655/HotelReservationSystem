@@ -2,7 +2,7 @@ package com.hotel.servlet;
 
 import com.hotel.dao.HotelDAO;
 import com.hotel.model.Hotel;
-import com.hotel.model.User;
+import com.hotel.model.User; 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
